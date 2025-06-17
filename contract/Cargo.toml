@@ -1,0 +1,19 @@
+[package]
+name = "contract"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+cosmwasm-std = "1.5.0"
+cosmwasm-storage = "1.5.0"
+schemars = "0.8"
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+secret-cosmwasm-std = "1.0.0"
+secret-toolkit = "0.10.3"
+thiserror = "1.0.69"
+
+[features]
+default = []

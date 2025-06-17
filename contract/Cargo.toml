@@ -8,8 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 cosmwasm-std = { package = "secret-cosmwasm-std", version = "1.1.11" }
-cosmwasm-storage = "1.5.0"
-schemars = "0.8"
+schemars = "0.8.22"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 secret-toolkit = "0.10.3"
 thiserror = "1.0.69"

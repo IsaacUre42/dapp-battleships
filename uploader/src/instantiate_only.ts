@@ -3,15 +3,16 @@ import * as dotenv from "dotenv";
 
 dotenv.config();  // Load environment variables from .env file
 const mnemonic = process.env.MNEMONIC;  // Retrieve the mnemonic
+const CHAIN_ID = process.env.CHAIN_ID
+const endpoint = process.env.SECRET_REST_URL
 
 const wallet = new Wallet(mnemonic);
-const CHAIN_ID = "pulsar-3";
 const DENOM = "uscrt";
 
 // create a new client for the Pulsar testnet
 const admin = new SecretNetworkClient({
     chainId: CHAIN_ID,
-    url: "https://pulsar.lcd.secretnodes.com",
+    url: endpoint,
     wallet,
     walletAddress: wallet.address,
 });
@@ -38,12 +39,6 @@ const instantiateContract = async (codeId: string, contractCodeHash: string): Pr
     const contractAddress = tx.arrayLog!.find((log) => log.type === "message" && log.key === "contract_address").value;
 
     return contractAddress;
-};
-
-type AuctionInfoResult = {
-    started: boolean,
-    minimum_bid?: string,
-    end_time?: string,
 };
 
 export const main = async (): Promise<void> => {

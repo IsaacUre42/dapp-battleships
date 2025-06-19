@@ -1,5 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use crate::state::Pos;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {}
@@ -9,6 +10,7 @@ pub struct InstantiateMsg {}
 pub enum ExecuteMsg {
     CreateGame {
         size: u8,
+        ships: Vec<ShipConstructor>
     },
     TakeShot {
         game_id: u128,
@@ -18,6 +20,13 @@ pub enum ExecuteMsg {
     CollectWinnings {
         game_id: u128
     },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+pub struct ShipConstructor {
+    pub position: Pos,
+    pub length: u8,
+    pub is_horizontal: bool
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]

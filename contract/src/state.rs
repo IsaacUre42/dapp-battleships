@@ -25,12 +25,12 @@ pub struct Game {
     pub ships: Vec<Ship>,
     pub created: Timestamp,
     pub creation_cost: u128,
-    pub winnings_collected: bool
+    pub winnings_collected: bool,
+    pub total_pot: u128
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct Shot {
-    pub id: u128,
     pub x: u8,
     pub y: u8,
     pub shooter: Addr,
@@ -52,6 +52,6 @@ pub struct Ship {
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct Pos {
-    x: u8,
-    y: u8,
+    pub x: u8,
+    pub y: u8,
 }

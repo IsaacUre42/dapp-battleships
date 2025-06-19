@@ -1,4 +1,4 @@
-use cosmwasm_std::{entry_point, to_binary, Addr, Binary, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
+use cosmwasm_std::{entry_point, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg};
 use crate::state::{Game, GAMES, NEXT_ID};
 
@@ -107,7 +107,7 @@ pub fn try_collect_winnings(
 
 #[entry_point]
 pub fn query(
-    deps: DepsMut,
+    deps: Deps,
     env: Env,
     msg: QueryMsg
 ) -> StdResult<Binary> {
@@ -119,7 +119,7 @@ pub fn query(
 }
 
 fn query_game(
-    deps: DepsMut,
+    deps: Deps,
     env: Env,
     game_id: u128
 ) -> StdResult<Binary> {

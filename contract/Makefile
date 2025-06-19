@@ -34,12 +34,13 @@ build-mainnet-reproducible:
 	docker run --rm -v "$$(pwd)":/contract \
 		--mount type=volume,source="$$(basename "$$(pwd)")_cache",target=/code/target \
 		--mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-		enigmampc/secret-contract-optimizer:1.0.10
+		ghcr.io/scrtlabs/secret-contract-optimizer:1.0.13
 
 .PHONY: compress-wasm
 compress-wasm:
 	cp ./target/wasm32-unknown-unknown/release/*.wasm ./contract.wasm
-	wasm-opt --enable-bulk-memory --enable-sign-ext -Oz ./contract.wasm -o ./contract.wasm
+	@## The following line is not necessary, may work only on linux (extra size optimization)
+	wasm-opt -Oz ./contract.wasm -o ./contract.wasm
 	cat ./contract.wasm | gzip -9 > ./contract.wasm.gz
 
 .PHONY: schema
@@ -52,7 +53,7 @@ start-server: # CTRL+C to stop
 	docker run -it --rm \
 		-p 9091:9091 -p 26657:26657 -p 26656:26656 -p 1317:1317 -p 5000:5000 \
 		-v $$(pwd):/root/code \
-		--name secretdev ghcr.io/scrtlabs/localsecret:v1.14.0
+		--name secretdev ghcr.io/scrtlabs/localsecret:v1.15.0
 
 # This relies on running `start-server` in another console
 # You can run other commands on the secretcli inside the dev image

@@ -12,14 +12,16 @@
     "prebuild": "npm run clean:dist",
     "build": "tsc",
     "start": "node dist/index",
-    "start:dev": "ts-node-dev --respawn --transpile-only index.ts",
+    "start:dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "pretest": "npm run build",
     "test": "mocha dist/test/**/*.js",
     "test:dev": "ts-mocha test/**/*.spec.ts -w --watch-files '**/*.ts'",
     "upload": "node dist/upload",
-    "instantiate": "node dist/instantiate"
+    "instantiate": "node dist/instantiate_only",
+    "test_auction": "node dist/instantiate_and_test"
   },
   "devDependencies": {
+    "@protobuf-ts/plugin": "^2.10.0",
     "@types/chai": "^4.3.4",
     "@types/lodash": "^4.14.188",
     "@types/mocha": "^10.0.0",

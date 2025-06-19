@@ -1,30 +1,26 @@
-import { SecretNetworkClient, Wallet } from "secretjs";
+import { SecretNetworkClient, Wallet, } from "secretjs";
 import * as dotenv from "dotenv";
 
 dotenv.config();  // Load environment variables from .env file
 const mnemonic = process.env.MNEMONIC;  // Retrieve the mnemonic
-const endpoint = process.env.SECRET_REST_URL || "http://localhost:1317";
-const chainId = process.env.CHAIN_ID || "secretdev-1";
 
 const wallet = new Wallet(mnemonic);
+const CHAIN_ID = "pulsar-3";
+const DENOM = "uscrt";
 
 // create a new client for the Pulsar testnet
-const secretjs = new SecretNetworkClient({
-    chainId: chainId,
-    url: endpoint,
-    wallet: wallet,
+const admin = new SecretNetworkClient({
+    chainId: CHAIN_ID,
+    url: "https://pulsar.lcd.secretnodes.com",
+    wallet,
     walletAddress: wallet.address,
 });
 
 const instantiateContract = async (codeId: string, contractCodeHash: string): Promise<string> => {
-    // The instantiate message is empty in this example.
-    // We could also send an `admin` address if we wanted to.
+    //instantiate message is empty in this example. If your contract needs to be instantiated with additional variables, be sure to include them.
 
     const initMsg = {};
-    // const initMsg = {
-    //     admin: wallet.address
-    // };
-    let tx = await secretjs.tx.compute.instantiateContract(
+    let tx = await admin.tx.compute.instantiateContract(
         {
             code_id: codeId,
             sender: wallet.address,
@@ -42,6 +38,12 @@ const instantiateContract = async (codeId: string, contractCodeHash: string): Pr
     const contractAddress = tx.arrayLog!.find((log) => log.type === "message" && log.key === "contract_address").value;
 
     return contractAddress;
+};
+
+type AuctionInfoResult = {
+    started: boolean,
+    minimum_bid?: string,
+    end_time?: string,
 };
 
 export const main = async (): Promise<void> => {

@@ -1,7 +1,7 @@
 use cosmwasm_std::{entry_point, to_binary, Addr, BankMsg, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Timestamp};
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg, ShipConstructor};
-use crate::state::{Game, Shot, GAMES, NEXT_ID};
-use crate::utilities::{check_shot, generate_real_ships, get_game};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg, ShipConstructor, ShotFired};
+use crate::state::{Game, Pos, Shot, GAMES, LAST_ACTIVE_ID, NEXT_ID};
+use crate::utilities::{check_shot, generate_real_ships, get_game, is_game_active, update_last_active_id};
 use crate::validation::{validate_funds, validate_ships, validate_ships_not_overlapping, validate_shot};
 
 #[entry_point]
@@ -13,7 +13,10 @@ pub fn instantiate(
 ) -> StdResult<Response> {
     // set the first id to 1
     let next_id: u128 = 1;
+    let last_active_id: u128 = 1;
     NEXT_ID.save(deps.storage, &next_id)?;
+    LAST_ACTIVE_ID.save(deps.storage, &last_active_id)?;
+    
     Ok(Response::default())
 }
 
@@ -25,8 +28,8 @@ pub fn execute(
     msg: ExecuteMsg
 ) -> StdResult<Response> {
     match msg {
-        ExecuteMsg::CreateGame { size, ships } => {
-            try_make_game(deps, env, info.sender, info.funds, size, ships)
+        ExecuteMsg::CreateGame { size, ships, name } => {
+            try_make_game(deps, env, info.sender, info.funds, size, ships, name)
         }
         ExecuteMsg::TakeShot { game_id, x, y } => {
             try_take_shot(deps, env, info.sender, info.funds, game_id, x, y)
@@ -37,17 +40,16 @@ pub fn execute(
     }
 }
 
-
-
 pub fn try_make_game(
     deps: DepsMut,
     env: Env,
     sender: Addr,
     funds: Vec<Coin>,
     size: u8,
-    ships: Vec<ShipConstructor>
+    ships: Vec<ShipConstructor>,
+    name: String,
 ) -> StdResult<Response> {
-
+    
     // Get the id and increment it
     let id = NEXT_ID.load(deps.storage)?;
     NEXT_ID.save(deps.storage, &(id + 1))?;
@@ -64,6 +66,7 @@ pub fn try_make_game(
     let game = Game {
         id,
         owner: sender,
+        name,
         size,
         shots: vec![],
         completed: false,
@@ -75,6 +78,8 @@ pub fn try_make_game(
     };
 
     GAMES.insert(deps.storage, &id, &game)?;
+
+    update_last_active_id(deps, &env)?;
 
     let res = Response::new().add_attribute("game_id", id.to_string());
     Ok(res)
@@ -90,12 +95,15 @@ pub fn try_take_shot(
     y: u8,
 ) -> StdResult<Response> {
     const REQUIRED_FUNDS: u128 = 10; // Cost to take a shot
-    
+
     // Validation
     let mut game = get_game(game_id, deps.as_ref())?;
+    if !is_game_active(&game, &env) {
+        return Err(StdError::generic_err("game is finished"))
+    }
     validate_funds(funds, REQUIRED_FUNDS)?;
     validate_shot(x, y, &game, &sender)?;
-    
+
     // Create the shot and check the outcome
     let shot = Shot {
         x,
@@ -104,6 +112,7 @@ pub fn try_take_shot(
         cost: REQUIRED_FUNDS,
         reward: 0,
         sunk: false,
+        hit: false,
         time: env.block.time,
     };
     let shot = check_shot(shot, &game);
@@ -111,11 +120,11 @@ pub fn try_take_shot(
     // Update the pot accordingly and store the shot info
     game.total_pot = game.total_pot + REQUIRED_FUNDS - shot.reward;
     game.shots.push(shot.clone());
-    
+
     GAMES.insert(deps.storage, &game_id, &game)?;
 
     let mut res = Response::default();
-    
+
     // Return any winnings
     if shot.reward > 0 {
         let send_msg = BankMsg::Send {
@@ -137,13 +146,34 @@ pub fn try_collect_winnings(
     sender: Addr,
     game_id: u128
 ) -> StdResult<Response> {
-    let game = get_game(game_id, deps.as_ref())?;
+
+    let mut game = get_game(game_id, deps.as_ref())?;
 
     if game.owner != sender {
-        return Err(StdError::generic_err("not authorized"))
+        return Err(StdError::generic_err("not authorized"));
+    }
+    
+    if is_game_active(&game, &env) {
+        return Err(StdError::generic_err("game is still active"))
+    }
+    
+    if game.winnings_collected {
+        return Err(StdError::generic_err("winnings already collected"));
     }
 
-    Ok(Response::default())
+    let amount = game.total_pot;
+    game.winnings_collected = true;
+    GAMES.insert(deps.storage, &game_id, &game)?;
+
+    let send_msg = BankMsg::Send {
+        to_address: sender.to_string(),
+        amount: vec![Coin {
+            denom: "uscrt".to_string(),
+            amount: amount.into(),
+        }],
+    };
+
+    Ok(Response::new().add_message(send_msg))
 }
 
 #[entry_point]
@@ -155,6 +185,9 @@ pub fn query(
     match msg {
         QueryMsg::Game { game_id } => {
             query_game(deps, env, game_id)
+        },
+        QueryMsg::AllGames {} => {
+            query_all_games(deps, env)
         }
     }
 }
@@ -166,14 +199,33 @@ fn query_game(
 ) -> StdResult<Binary> {
     let game = get_game(game_id, deps)?;
 
+    let ships: Vec<u8> = game.ships.iter().map(|ship| ship.length).collect();
+    let total_reward: u128 = game.ships.iter().map(|ship| ship.reward).sum();
+    let shots: Vec<ShotFired> = game.shots.iter().map(|shot| ShotFired {
+        position: Pos { x: shot.x, y: shot.y },
+        hit: shot.hit,
+    }).collect();
+
     Ok(
         to_binary(&QueryAnswer::Game {
             game_id,
             size: game.size,
-            total_reward: game.creation_cost,
-            shots_taken: game.shots.len() as u128,
-            owner: "".to_string(),
-            ships: vec![],
+            total_reward,
+            shots_taken: shots,
+            name: game.name,
+            ships,
         })?
     )
+}
+
+fn query_all_games(
+    deps: Deps,
+    env: Env,
+) -> StdResult<Binary> {
+    let lowest_id = LAST_ACTIVE_ID.load(deps.storage)?;
+    let newest_id = NEXT_ID.load(deps.storage)?;
+
+    let ids: Vec<u128> = (lowest_id..newest_id).collect();
+
+    Ok(to_binary(&QueryAnswer::AllGames { ids })?)
 }

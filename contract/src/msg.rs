@@ -10,7 +10,8 @@ pub struct InstantiateMsg {}
 pub enum ExecuteMsg {
     CreateGame {
         size: u8,
-        ships: Vec<ShipConstructor>
+        ships: Vec<ShipConstructor>,
+        name: String
     },
     TakeShot {
         game_id: u128,
@@ -35,6 +36,7 @@ pub enum QueryMsg {
     Game {
         game_id: u128
     },
+    AllGames {}
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
@@ -44,8 +46,17 @@ pub enum QueryAnswer {
         game_id: u128,
         size: u8,
         total_reward: u128,
-        shots_taken: u128,
-        owner: String,
+        shots_taken: Vec<ShotFired>,
+        name: String,
         ships: Vec<u8>
+    },
+    AllGames {
+        ids: Vec<u128>
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+pub struct ShotFired {
+    pub(crate) position: Pos,
+    pub(crate) hit: bool
 }

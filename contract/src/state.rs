@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub const PLAYERS: Keymap<CanonicalAddr, Player> = Keymap::new(b"players");
 pub const GAMES: Keymap<u128, Game> = Keymap::new(b"game");
 pub const NEXT_ID: Item<u128> = Item::new(b"next_id");
+pub const LAST_ACTIVE_ID: Item<u128> = Item::new(b"last_active");
 
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
@@ -19,6 +20,7 @@ pub struct Player {
 pub struct Game {
     pub id: u128,
     pub owner: Addr,
+    pub name: String,
     pub size: u8,
     pub shots: Vec<Shot>,
     pub completed: bool,
@@ -37,6 +39,7 @@ pub struct Shot {
     pub cost: u128,
     pub reward: u128,
     pub sunk: bool,
+    pub hit: bool,
     pub time: Timestamp
 }
 

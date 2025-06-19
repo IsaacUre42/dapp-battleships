@@ -1,6 +1,6 @@
-use cosmwasm_std::{Deps, DepsMut, Env, StdError};
+use cosmwasm_std::{Deps, DepsMut, Env, StdError, StdResult};
 use crate::msg::ShipConstructor;
-use crate::state::{Game, Pos, Ship, Shot, GAMES};
+use crate::state::{Game, Pos, Ship, Shot, GAMES, LAST_ACTIVE_ID, NEXT_ID};
 
 pub fn generate_real_ships(ships: Vec<ShipConstructor>) -> Vec<Ship> {
     let mut constructed_ships: Vec<Ship> = vec![];
@@ -30,11 +30,47 @@ pub fn generate_real_ships(ships: Vec<ShipConstructor>) -> Vec<Ship> {
     constructed_ships
 }
 
+pub fn update_last_active_id(deps: DepsMut, env: &Env) -> StdResult<()> {
+    let last_active_id = LAST_ACTIVE_ID.load(deps.storage)?;
+    let next_id = NEXT_ID.load(deps.storage)?;
+
+    let mut oldest_active_id: Option<u128> = None;
+    for id in last_active_id..next_id {
+        if let Some(game) = GAMES.get(deps.storage, &id) {
+            if is_game_active(&game, env) {
+                oldest_active_id = Some(id);
+                break;
+            }
+            if !game.completed {
+                let mut updated = game.clone();
+                updated.completed = true;
+                GAMES.insert(deps.storage, &updated.id, &updated)?;
+            }
+        }
+    }
+
+    if let Some(id) = oldest_active_id {
+        LAST_ACTIVE_ID.save(deps.storage, &id)?;
+    }
+    Ok(())
+}
+
+fn is_ship_sunk(ship: &Ship, shots: &[Shot]) -> bool {
+    ship.tiles.iter().all(|tile| {
+        shots.iter().any(|shot| shot.x == tile.x && shot.y == tile.y)
+    })
+}
+
+pub fn is_game_active(game: &Game, env: &Env) -> bool {
+    let all_sunk = game.ships.iter().all(|ship| is_ship_sunk(ship, &game.shots));
+    let within_24h = env.block.time.seconds() < game.created.seconds() + 24 * 60 * 60;
+    !all_sunk && within_24h && !game.completed
+}
 
 pub fn get_game(game_id: u128, deps: Deps) -> Result<Game, StdError> {
     let game = GAMES.get(deps.storage, &game_id);
     let game = match game {
-        None => return Err(StdError::not_found("game not found")),
+        None => return Err(StdError::generic_err("game not found")),
         Some(game) => game,
     };
     Ok(game)
@@ -44,6 +80,7 @@ pub fn check_shot(mut shot: Shot, game: &Game) -> Shot {
     for ship in &game.ships {
         if ship.tiles.iter().any(|tile| tile.x == shot.x && tile.y == shot.y) {
             // Check if all tiles of the ship have been shot (including this one)
+            shot.hit = true;
             let all_hit = ship.tiles.iter().all(|tile| {
                 game.shots.iter().any(|s| s.x == tile.x && s.y == tile.y)
                     || (tile.x == shot.x && tile.y == shot.y)

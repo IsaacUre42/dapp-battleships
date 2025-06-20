@@ -3,18 +3,9 @@ use schemars::{JsonSchema};
 use secret_toolkit::storage::{Item, Keymap};
 use serde::{Deserialize, Serialize};
 
-pub const PLAYERS: Keymap<CanonicalAddr, Player> = Keymap::new(b"players");
 pub const GAMES: Keymap<u128, Game> = Keymap::new(b"game");
 pub const NEXT_ID: Item<u128> = Item::new(b"next_id");
 pub const LAST_ACTIVE_ID: Item<u128> = Item::new(b"last_active");
-
-
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
-pub struct Player {
-    pub address: Addr,
-    pub name: String,
-    pub games: Vec<u128>
-}
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct Game {

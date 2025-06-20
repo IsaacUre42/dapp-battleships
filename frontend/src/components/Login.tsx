@@ -42,7 +42,7 @@ function Login({ setClient }: { setClient: (c: BattleshipClient) => void }) {
 
     return (
         <Container size="xs" pt="xl">
-            <Title ta="center" mb="md">Welcome to Battleship!</Title>
+            <Title ta="center" mb="md">Welcome to Battleships!</Title>
             <TextInput
                 label="Mnemonic"
                 value={mnemonic}

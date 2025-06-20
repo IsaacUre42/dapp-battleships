@@ -214,6 +214,7 @@ fn query_game(
             shots_taken: shots,
             name: game.name,
             ships,
+            owner: game.owner.into_string()
         })?
     )
 }

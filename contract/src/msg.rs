@@ -1,3 +1,4 @@
+use cosmwasm_schema::QueryResponses;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use crate::state::Pos;
@@ -39,20 +40,39 @@ pub enum QueryMsg {
     AllGames {}
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema, QueryResponses)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryAnswer {
+    #[returns(GameResponse)]
     Game {
         game_id: u128,
         size: u8,
         total_reward: u128,
         shots_taken: Vec<ShotFired>,
         name: String,
-        ships: Vec<u8>
+        ships: Vec<u8>,
+        owner: String
     },
+    #[returns(AllGamesResponse)]
     AllGames {
         ids: Vec<u128>
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+pub struct GameResponse {
+    pub game_id: u128,
+    pub size: u8,
+    pub total_reward: u128,
+    pub shots_taken: Vec<ShotFired>,
+    pub name: String,
+    pub ships: Vec<u8>,
+    pub owner: String
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+pub struct AllGamesResponse {
+    pub ids: Vec<u128>
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]

@@ -5,8 +5,10 @@ export interface GameResponse {
         total_reward: string,
         shots_taken: Array<ShotFired>,
         name: string,
-        ships: Array<number>,
-        owner: string
+        ships: Array<{length: number, sunk: boolean}>,
+        owner: string,
+        completed: boolean,
+        reward_collected: boolean
     }
 }
 

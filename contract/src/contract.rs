@@ -1,7 +1,7 @@
 use cosmwasm_std::{entry_point, to_binary, Addr, BankMsg, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Timestamp};
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg, ShipConstructor, ShotFired};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryAnswer, QueryMsg, ShipConstructor, ShipInfo, ShotFired};
 use crate::state::{Game, Pos, Shot, GAMES, LAST_ACTIVE_ID, NEXT_ID};
-use crate::utilities::{check_shot, generate_real_ships, get_game, is_game_active, update_last_active_id};
+use crate::utilities::{check_shot, generate_real_ships, get_game, is_game_active, is_ship_sunk, update_last_active_id};
 use crate::validation::{validate_funds, validate_ships, validate_ships_not_overlapping, validate_shot};
 
 #[entry_point]
@@ -59,7 +59,13 @@ pub fn try_make_game(
     if !(validate_ships_not_overlapping(real_ships.clone())) {return Err(StdError::generic_err("Invalid ship placement"));}
 
     let sum_length_ships: u128 = real_ships.iter().map(|s| s.length as u128).sum();
-    let cost = ((size as u128).pow(2) - sum_length_ships) + 10;
+
+
+    let base_cost: u128 = 500_000; // 0.5 SCRT
+    let per_tile_cost: u128 = 25_000; // 0.025 SCRT per tile
+    let per_ship_tile_cost: u128 = 25_000; // 0.025 SCRT per ship
+
+    let cost = base_cost + (per_tile_cost * (size as u128).pow(2)) - (per_ship_tile_cost * sum_length_ships);
 
     validate_funds(funds, cost)?;
 
@@ -94,7 +100,7 @@ pub fn try_take_shot(
     x: u8,
     y: u8,
 ) -> StdResult<Response> {
-    const REQUIRED_FUNDS: u128 = 10; // Cost to take a shot
+    const REQUIRED_FUNDS: u128 = 100000; // Cost to take a shot
 
     // Validation
     let mut game = get_game(game_id, deps.as_ref())?;
@@ -199,12 +205,19 @@ fn query_game(
 ) -> StdResult<Binary> {
     let game = get_game(game_id, deps)?;
 
-    let ships: Vec<u8> = game.ships.iter().map(|ship| ship.length).collect();
+    let ships: Vec<ShipInfo> = game.ships.iter().map(|ship| ShipInfo {
+        length: ship.length,
+        sunk: is_ship_sunk(ship, &game.shots),
+    }).collect();
+    
+    
     let total_reward: u128 = game.ships.iter().map(|ship| ship.reward).sum();
     let shots: Vec<ShotFired> = game.shots.iter().map(|shot| ShotFired {
         position: Pos { x: shot.x, y: shot.y },
         hit: shot.hit,
     }).collect();
+    
+    let completed = !is_game_active(&game, &env);
 
     Ok(
         to_binary(&QueryAnswer::Game {
@@ -214,7 +227,9 @@ fn query_game(
             shots_taken: shots,
             name: game.name,
             ships,
-            owner: game.owner.into_string()
+            owner: game.owner.into_string(),
+            completed,
+            reward_collected: game.winnings_collected,
         })?
     )
 }

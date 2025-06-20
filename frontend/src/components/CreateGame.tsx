@@ -19,7 +19,7 @@ interface CreateGameProps {
     onCreated?: () => void;
 }
 
-function CreateGame({ gridSize = 10, shipSizes = [2, 3, 4, 6], cost = 95, onCreated }: CreateGameProps) {
+function CreateGame({ gridSize = 10, shipSizes = [2, 3, 4, 6], cost = 2625000, onCreated }: CreateGameProps) {
     const client = useClient();
     const navigate = useNavigate();
     const [ships, setShips] = useState<Ship[]>([]);
@@ -221,7 +221,7 @@ function CreateGame({ gridSize = 10, shipSizes = [2, 3, 4, 6], cost = 95, onCrea
 
         <Container style={{ position: "relative" }}>
             <Group justify="flex-start" mb="xs">
-                <Button variant="subtle" onClick={() => onCreated}>
+                <Button variant="subtle" onClick={() => {if (onCreated) onCreated()}}>
                     ← Back
                 </Button>
             </Group>

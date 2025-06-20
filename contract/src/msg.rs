@@ -50,13 +50,21 @@ pub enum QueryAnswer {
         total_reward: u128,
         shots_taken: Vec<ShotFired>,
         name: String,
-        ships: Vec<u8>,
-        owner: String
+        ships: Vec<ShipInfo>,
+        owner: String,
+        completed: bool,
+        reward_collected: bool
     },
     #[returns(AllGamesResponse)]
     AllGames {
         ids: Vec<u128>
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+pub struct ShipInfo {
+    pub(crate) length: u8,
+    pub(crate) sunk: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
@@ -66,8 +74,10 @@ pub struct GameResponse {
     pub total_reward: u128,
     pub shots_taken: Vec<ShotFired>,
     pub name: String,
-    pub ships: Vec<u8>,
-    pub owner: String
+    pub ships: Vec<ShipInfo>,
+    pub owner: String,
+    completed: bool,
+    reward_collected: bool
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]

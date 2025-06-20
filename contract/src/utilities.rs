@@ -20,7 +20,7 @@ pub fn generate_real_ships(ships: Vec<ShipConstructor>) -> Vec<Ship> {
             x: ship.position.x,
             y: ship.position.y,
             length: ship.length,
-            reward: (ship.length * 10) as u128,
+            reward: (ship.length as u128) * 200000,
             tiles,
             is_horizontal: ship.is_horizontal,
         };
@@ -37,7 +37,7 @@ pub fn update_last_active_id(deps: DepsMut, env: &Env) -> StdResult<()> {
     let mut oldest_active_id: Option<u128> = None;
     for id in last_active_id..next_id {
         if let Some(game) = GAMES.get(deps.storage, &id) {
-            if is_game_active(&game, env) {
+            if is_game_active(&game, env) || !game.winnings_collected {
                 oldest_active_id = Some(id);
                 break;
             }
@@ -55,7 +55,7 @@ pub fn update_last_active_id(deps: DepsMut, env: &Env) -> StdResult<()> {
     Ok(())
 }
 
-fn is_ship_sunk(ship: &Ship, shots: &[Shot]) -> bool {
+pub fn is_ship_sunk(ship: &Ship, shots: &[Shot]) -> bool {
     ship.tiles.iter().all(|tile| {
         shots.iter().any(|shot| shot.x == tile.x && shot.y == tile.y)
     })
